@@ -1,12 +1,18 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { UPLOAD_ROOT } from './modules/upload/upload.controller';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.setGlobalPrefix('v1');
+
+  // Uploaded product/category/logo images — served outside the /v1 prefix so the
+  // returned URLs work as plain <img src> links.
+  app.useStaticAssets(UPLOAD_ROOT, { prefix: '/uploads/' });
 
   app.useGlobalPipes(
     new ValidationPipe({

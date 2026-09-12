@@ -15,6 +15,7 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { DiscountModule } from './modules/discount/discount.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { StorefrontModule } from './modules/storefront/storefront.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { StorefrontModule } from './modules/storefront/storefront.module';
     DiscountModule,
     CustomerModule,
     StorefrontModule,
+    UploadModule,
   ],
 })
 export class AppModule {

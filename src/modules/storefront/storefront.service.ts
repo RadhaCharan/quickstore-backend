@@ -224,7 +224,22 @@ export class StorefrontService {
     return {
       tenant,
       features: flags.map((f) => f.feature),
-      config: configRow || {},
+      // The admin Settings form reads/writes camelCase — map the raw snake_case row so a
+      // saved config actually reappears after a reload instead of looking reset to defaults.
+      config: configRow ? {
+        theme: configRow.theme,
+        logoUrl: configRow.logo_url,
+        bannerUrl: configRow.banner_url,
+        primaryColor: configRow.primary_color,
+        storeName: configRow.store_name,
+        tagline: configRow.tagline,
+        contactPhone: configRow.contact_phone,
+        contactEmail: configRow.contact_email,
+        deliveryRadiusKm: configRow.delivery_radius_km,
+        minOrderAmount: configRow.min_order_amt,
+        deliveryFee: configRow.delivery_fee,
+        freeDeliveryAbove: configRow.free_delivery_above,
+      } : {},
     };
   }
 

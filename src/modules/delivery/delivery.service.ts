@@ -1,18 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateAgentDto {
-  name: string;
-  phone: string;
+  @IsString() @IsNotEmpty() name: string;
+  @IsString() @IsNotEmpty() phone: string;
 }
 
 export class AssignDeliveryDto {
-  agentId: string;
+  @IsString() @IsNotEmpty() agentId: string;
+
+  @IsOptional() @IsNumber() @Type(() => Number)
   estimatedTime?: number; // minutes
 }
 
 export class UpdateDeliveryStatusDto {
+  @IsIn(['PENDING', 'ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'])
   status: string;
+
+  @IsOptional() @IsString()
   notes?: string;
 }
 

@@ -50,7 +50,12 @@ export class AuthService {
 
     // In production: send via SMS gateway (Twilio, MSG91)
     console.log(`OTP for ${dto.phone}: ${otp}`);
-    return { message: 'OTP sent successfully' };
+
+    const isDev = this.cfg.get('NODE_ENV') === 'development';
+    return {
+      message: 'OTP sent successfully',
+      ...(isDev && { otp }), // dev-only: skip SMS gateway and hand back the code directly
+    };
   }
 
   async verifyOtp(dto: VerifyOtpDto, tenantId: string) {

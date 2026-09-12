@@ -15,6 +15,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: any) {
     return {
+      // Every controller reads req.user.sub (vendor user id, or customer phone for
+      // customer-issued tokens) — keep it under its original JWT claim name.
+      sub: payload.sub,
       id: payload.sub,
       email: payload.email,
       role: payload.role,

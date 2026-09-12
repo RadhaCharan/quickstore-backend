@@ -4,6 +4,7 @@ import {
 import {
   ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiBody,
 } from '@nestjs/swagger';
+import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { TenantService } from './tenant.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { JwtGuard } from '../../common/guards/jwt.guard';
@@ -11,16 +12,21 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
 
 class ApproveDto {
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   featureKeys?: string[];
 }
 class RejectDto {
+  @IsString()
+  @IsNotEmpty()
   notes: string;
 }
 class UpdateTenantDto {
-  name?: string;
-  ownerName?: string;
-  phone?: string;
-  category?: string;
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() ownerName?: string;
+  @IsOptional() @IsString() phone?: string;
+  @IsOptional() @IsString() category?: string;
 }
 
 @ApiTags('Tenant')
