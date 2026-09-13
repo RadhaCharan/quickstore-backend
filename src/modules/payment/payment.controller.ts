@@ -2,21 +2,23 @@ import {
   Controller, Post, Body, Headers, UseGuards, RawBodyRequest, Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PaymentService } from './payment.service';
 import { JwtGuard } from '../../common/guards/jwt.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentTenant } from '../../common/decorators/tenant.decorator';
 
 class CreateRazorpayOrderDto {
-  orderId: string;
-  amount: number;
+  @IsString() @IsNotEmpty() orderId: string;
+  @IsNumber() @Type(() => Number) amount: number;
 }
 
 class VerifyPaymentDto {
-  razorpayOrderId: string;
-  razorpayPaymentId: string;
-  signature: string;
-  internalOrderId: string;
+  @IsString() @IsNotEmpty() razorpayOrderId: string;
+  @IsString() @IsNotEmpty() razorpayPaymentId: string;
+  @IsString() @IsNotEmpty() signature: string;
+  @IsString() @IsNotEmpty() internalOrderId: string;
 }
 
 @ApiTags('Payments')

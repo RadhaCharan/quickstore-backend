@@ -3,6 +3,9 @@ dist/
 .env
 *.local
 
+# Locally-uploaded product/category/logo images (runtime data, not source)
+uploads/
+
 logs/
 *.log
 npm-debug.log*

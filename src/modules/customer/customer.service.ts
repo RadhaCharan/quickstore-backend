@@ -1,19 +1,51 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsNumber, IsBoolean } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateCustomerDto {
+  @IsOptional()
+  @IsString()
   name?: string;
+
+  @IsOptional()
+  @IsEmail()
   email?: string;
 }
 
 export class CreateAddressDto {
+  @IsOptional()
+  @IsString()
   label?: string;
+
+  @IsString()
+  @IsNotEmpty()
   line1: string;
+
+  @IsOptional()
+  @IsString()
   line2?: string;
+
+  @IsOptional()
+  @IsString()
   city?: string;
+
+  @IsOptional()
+  @IsString()
   pincode?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   lat?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   lng?: number;
+
+  @IsOptional()
+  @IsBoolean()
   isDefault?: boolean;
 }
 
@@ -27,10 +59,11 @@ export class CustomerService {
     const s = `"${schemaName}"`;
     const offset = (page - 1) * limit;
     const rows = await this.dataSource.query(
-      `SELECT id, name, phone, email, created_at
-       FROM ${s}.customers
-       WHERE name ILIKE $1 OR phone ILIKE $1
-       ORDER BY created_at DESC
+      `SELECT c.id, c.name, c.phone, c.email, c.created_at as "createdAt",
+              (SELECT COUNT(*) FROM ${s}.orders o WHERE o.customer_id = c.id)::int as "orderCount"
+       FROM ${s}.customers c
+       WHERE c.name ILIKE $1 OR c.phone ILIKE $1
+       ORDER BY c.created_at DESC
        LIMIT $2 OFFSET $3`,
       [`%${search ?? ''}%`, limit, offset],
     );
