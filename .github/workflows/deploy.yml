@@ -2,7 +2,7 @@ name: Deploy Backend → GCP Cloud Run
 
 on:
   push:
-    branches: [main]          # Auto-triggers on every push to main
+    branches: [main]
 
 permissions:
   contents: read
@@ -20,37 +20,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout code
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Authenticate to GCP via Workload Identity Federation (no JSON key)
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/771498653907/locations/global/workloadIdentityPools/github-pool/providers/github-provider
           service_account: github-actions-deployer@radhaproject-500302.iam.gserviceaccount.com
 
-      # 3. Set up gcloud CLI
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      # 4. Configure Docker to push to Artifact Registry
-      - name: Configure Docker
+      - name: Configure Docker auth
         run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
-      # 5. Build image via Cloud Build (runs on GCP — no local Docker needed)
-      - name: Build & push image
+      # Build image directly on GitHub runner (no Cloud Build needed)
+      - name: Build Docker image
         run: |
-          gcloud builds submit \
-            --tag "${{ env.IMAGE }}:${{ github.sha }}" \
-            --tag "${{ env.IMAGE }}:latest" \
-            --project ${{ env.PROJECT_ID }} \
-            --quiet
+          docker build \
+            -t "${{ env.IMAGE }}:${{ github.sha }}" \
+            -t "${{ env.IMAGE }}:latest" \
+            .
 
-      # 6. Deploy new revision to Cloud Run
+      - name: Push image to Artifact Registry
+        run: |
+          docker push "${{ env.IMAGE }}:${{ github.sha }}"
+          docker push "${{ env.IMAGE }}:latest"
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE }} \
@@ -88,7 +87,6 @@ jobs:
           JWT_REFRESH_SECRET=qs-jwt-refresh-secret:latest" \
             --quiet
 
-      # 7. Print the live URL
       - name: Print service URL
         run: |
           URL=$(gcloud run services describe ${{ env.SERVICE }} \
