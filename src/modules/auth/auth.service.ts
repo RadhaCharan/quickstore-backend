@@ -6,7 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
-import Twilio from 'twilio';
+import { Twilio } from 'twilio';
 import { PlatformUser } from './entities/platform-user.entity';
 import { Tenant } from '../tenant/tenant.entity';
 import { LoginDto } from './dto/login.dto';
@@ -15,7 +15,7 @@ import { CustomerOtpDto, VerifyOtpDto } from './dto/otp.dto';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly twilio: Twilio.Twilio;
+  private readonly twilio: Twilio;
   private readonly verifyServiceSid: string;
 
   constructor(
@@ -26,7 +26,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly cfg: ConfigService,
   ) {
-    this.twilio = Twilio(
+    this.twilio = new Twilio(
       this.cfg.get<string>('TWILIO_ACCOUNT_SID'),
       this.cfg.get<string>('TWILIO_AUTH_TOKEN'),
     );
