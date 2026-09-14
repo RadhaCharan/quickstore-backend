@@ -124,13 +124,22 @@ export class AuthService {
   // ─── Vendor: signup phone verification ────────────────────────────────────
   //  Called after signup form submit. Sends OTP to the phone used at signup.
 
+  /** Find the most-recent PENDING tenant for a phone — falls back to any status */
+  private async findTenantByPhone(phone: string) {
+    const e164 = this.toE164(phone);
+    // Most-recently created PENDING tenant — handles multiple PENDING signups with same phone
+    return (
+      await this.tenantRepo.findOne({ where: { phone: e164, status: 'PENDING' }, order: { createdAt: 'DESC' } }) ??
+      await this.tenantRepo.findOne({ where: { phone,    status: 'PENDING' }, order: { createdAt: 'DESC' } }) ??
+      await this.tenantRepo.findOne({ where: { phone: e164 }, order: { createdAt: 'DESC' } }) ??
+      await this.tenantRepo.findOne({ where: { phone },    order: { createdAt: 'DESC' } })
+    );
+  }
+
   async sendSignupOtp(phone: string) {
     const e164 = this.toE164(phone);
-    const tenant = await this.tenantRepo.findOne({ where: { phone: e164 } })
-      ?? await this.tenantRepo.findOne({ where: { phone } });
-
+    const tenant = await this.findTenantByPhone(phone);
     if (!tenant) throw new NotFoundException('No account found for this phone. Please sign up first.');
-
     await this.twilioSend(e164);
     return { message: 'OTP sent. Enter the code to activate your store.' };
   }
@@ -140,15 +149,27 @@ export class AuthService {
     const approved = await this.twilioCheck(e164, otp);
     if (!approved) throw new BadRequestException('Invalid or expired OTP');
 
-    const tenant = await this.tenantRepo.findOne({ where: { phone: e164 } })
-      ?? await this.tenantRepo.findOne({ where: { phone } });
+    // Always target the PENDING tenant — avoids picking an ACTIVE tenant with same phone
+    const tenant = await this.findTenantByPhone(phone);
     if (!tenant) throw new NotFoundException('Vendor not found');
 
+    // Activate tenant if not already active
     if (tenant.status !== 'ACTIVE') {
       await this.tenantRepo.update(tenant.id, { status: 'ACTIVE' });
     }
 
-    return { message: 'Phone verified! Your store is now active. Please log in.' };
+    // Auto-login: issue JWT so frontend can navigate directly to onboarding
+    const user = await this.userRepo.findOne({
+      where: { tenantId: tenant.id, role: 'VENDOR_OWNER' },
+    });
+    if (!user) return { message: 'Phone verified! Your store is now active. Please log in.' };
+
+    const tokens = this.issueTokens(user);
+    return {
+      message: 'Phone verified! Your store is now active.',
+      ...tokens,
+      activated: true,
+    };
   }
 
   // ─── Customer: phone OTP login (on vendor storefront) ─────────────────────

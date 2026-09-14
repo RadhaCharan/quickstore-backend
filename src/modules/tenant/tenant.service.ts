@@ -31,7 +31,20 @@ export class TenantService {
 
   async signup(dto: CreateTenantDto) {
     const existing = await this.tenantRepo.findOne({ where: { email: dto.email } });
-    if (existing) throw new ConflictException('Email already registered');
+    if (existing) {
+      if (existing.status === 'PENDING') {
+        // Account exists but not verified — resend OTP so vendor can complete signup
+        await this.authService.sendSignupOtp(dto.phone || existing.phone);
+        return {
+          message: 'Account already exists! A new OTP has been sent to verify your phone.',
+          tenantId: existing.id,
+          slug: existing.slug,
+          phone: existing.phone,
+          requiresOtp: true,
+        };
+      }
+      throw new ConflictException('Email already registered');
+    }
 
     const slug = this.buildSlug(dto.name);
     const slugExists = await this.tenantRepo.findOne({ where: { slug } });
