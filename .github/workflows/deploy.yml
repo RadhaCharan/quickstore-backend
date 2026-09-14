@@ -1,0 +1,98 @@
+name: Deploy Backend → GCP Cloud Run
+
+on:
+  push:
+    branches: [main]          # Auto-triggers on every push to main
+
+permissions:
+  contents: read
+  id-token: write             # Required for Workload Identity Federation
+
+env:
+  PROJECT_ID: radhaproject-500302
+  REGION: asia-south1
+  SERVICE: quickstore-backend
+  IMAGE: asia-south1-docker.pkg.dev/radhaproject-500302/quickstore-images/backend
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Authenticate to GCP via Workload Identity Federation (no JSON key)
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/771498653907/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-actions-deployer@radhaproject-500302.iam.gserviceaccount.com
+
+      # 3. Set up gcloud CLI
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      # 4. Configure Docker to push to Artifact Registry
+      - name: Configure Docker
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      # 5. Build image via Cloud Build (runs on GCP — no local Docker needed)
+      - name: Build & push image
+        run: |
+          gcloud builds submit \
+            --tag "${{ env.IMAGE }}:${{ github.sha }}" \
+            --tag "${{ env.IMAGE }}:latest" \
+            --project ${{ env.PROJECT_ID }} \
+            --quiet
+
+      # 6. Deploy new revision to Cloud Run
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image "${{ env.IMAGE }}:${{ github.sha }}" \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --allow-unauthenticated \
+            --port 3001 \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 5 \
+            --timeout 60 \
+            --add-cloudsql-instances "${{ env.PROJECT_ID }}:${{ env.REGION }}:quickstore-db" \
+            --set-env-vars "\
+          NODE_ENV=production,\
+          DB_HOST=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:quickstore-db,\
+          DB_PORT=5432,\
+          DB_USER=quickstore,\
+          DB_NAME=quickstore_platform,\
+          JWT_EXPIRES_IN=15m,\
+          JWT_REFRESH_EXPIRES_IN=7d,\
+          BASE_DOMAIN=quickstore.in,\
+          ALLOWED_ORIGINS=https://quickstore-frontend-771498653907.asia-south1.run.app,\
+          RAZORPAY_KEY_ID=rzp_test_placeholder,\
+          RAZORPAY_KEY_SECRET=placeholder,\
+          RAZORPAY_WEBHOOK_SECRET=placeholder,\
+          AWS_ACCESS_KEY_ID=placeholder,\
+          AWS_SECRET_ACCESS_KEY=placeholder,\
+          AWS_REGION=ap-south-1,\
+          AWS_S3_BUCKET=quickstore-assets" \
+            --set-secrets "\
+          DB_PASSWORD=qs-db-password:latest,\
+          JWT_SECRET=qs-jwt-secret:latest,\
+          JWT_REFRESH_SECRET=qs-jwt-refresh-secret:latest" \
+            --quiet
+
+      # 7. Print the live URL
+      - name: Print service URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region ${{ env.REGION }} \
+            --format="value(status.url)")
+          echo "✅ Backend live at: $URL"
+          echo "   Swagger docs:   $URL/docs"
