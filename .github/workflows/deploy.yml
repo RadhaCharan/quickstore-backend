@@ -85,7 +85,10 @@ jobs:
             --set-secrets "\
           DB_PASSWORD=qs-db-password:latest,\
           JWT_SECRET=qs-jwt-secret:latest,\
-          JWT_REFRESH_SECRET=qs-jwt-refresh-secret:latest" \
+          JWT_REFRESH_SECRET=qs-jwt-refresh-secret:latest,\
+          TWILIO_ACCOUNT_SID=twilio-account-sid:latest,\
+          TWILIO_AUTH_TOKEN=twilio-auth-token:latest,\
+          TWILIO_VERIFY_SID=twilio-verify-sid:latest" \
             --quiet
 
       - name: Print service URL

@@ -47,7 +47,7 @@ export class TenantService {
       phone: dto.phone,
       category: dto.category,
       slug,
-      status: 'ACTIVE',
+      status: 'PENDING',   // activated after phone OTP verification
       schemaName,
     });
     const saved = await this.tenantRepo.save(tenant);
@@ -79,10 +79,15 @@ export class TenantService {
     });
     await this.onboardingRepo.save(request);
 
+    // Send OTP to vendor's phone to verify and activate the store
+    await this.authService.sendSignupOtp(dto.phone);
+
     return {
-      message: 'Store created successfully! You can now log in.',
+      message: 'Account created! Enter the OTP sent to your phone to activate your store.',
       tenantId: saved.id,
       slug: saved.slug,
+      phone: dto.phone,
+      requiresOtp: true,
     };
   }
 
