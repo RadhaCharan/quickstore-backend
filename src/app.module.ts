@@ -42,17 +42,21 @@ import { UploadModule } from './modules/upload/upload.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (cfg: ConfigService) => {
-        const redisPassword = cfg.get('REDIS_PASSWORD');
-        return {
-          store: await redisStore({
+        const redisHost = cfg.get('REDIS_HOST');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cacheConfig: any = { ttl: 300 };
+        if (redisHost) {
+          const redisPassword = cfg.get('REDIS_PASSWORD');
+          cacheConfig.store = await redisStore({
             socket: {
-              host: cfg.get('REDIS_HOST', 'localhost'),
+              host: redisHost,
               port: cfg.get<number>('REDIS_PORT', 6379),
             },
             ...(redisPassword ? { password: redisPassword } : {}),
             ttl: 300,
-          }),
-        };
+          });
+        }
+        return cacheConfig;
       },
     }),
 
@@ -74,12 +78,12 @@ export class AppModule {
     consumer
       .apply(TenantMiddleware)
       .exclude(
-        { path: 'v1/storefront/:slug', method: RequestMethod.GET },
-        { path: 'v1/storefront/:slug/products', method: RequestMethod.GET },
-        { path: 'v1/storefront/:slug/categories', method: RequestMethod.GET },
-        { path: 'v1/auth/(.*)', method: RequestMethod.POST },
-        { path: 'v1/tenant/signup', method: RequestMethod.POST },
-        { path: 'v1/payments/webhook', method: RequestMethod.POST },
+        { path: 'storefront/:slug', method: RequestMethod.GET },
+        { path: 'storefront/:slug/products', method: RequestMethod.GET },
+        { path: 'storefront/:slug/categories', method: RequestMethod.GET },
+        { path: 'auth/(.*)', method: RequestMethod.POST },
+        { path: 'tenant/signup', method: RequestMethod.POST },
+        { path: 'payments/webhook', method: RequestMethod.POST },
       )
       .forRoutes('*');
   }

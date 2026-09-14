@@ -1,0 +1,9 @@
+.gcloudignore
+.git
+.gitignore
+node_modules/
+dist/
+*.md
+.env
+.env.*
+docker-compose.yml
